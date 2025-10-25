@@ -10,31 +10,27 @@ const Login: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
-  // ✅ Check if user is already logged in
+  // ✅ Check for existing session (on first load)
   useEffect(() => {
-    const checkSession = async () => {
+    const initSession = async () => {
       const { data, error } = await supabase.auth.getSession();
-
       if (error) {
         console.error('Erreur de session:', error);
-        setCheckingSession(false);
-        return;
       }
-
       if (data?.session) {
-        console.log('✅ Déjà connecté, redirection vers Dashboard');
+        console.log('✅ Session existante, redirection vers Dashboard');
         window.location.replace('/Dashboard');
-      } else {
-        setCheckingSession(false);
       }
+      setCheckingSession(false);
     };
 
-    // Small delay to let Supabase initialize local session
-    setTimeout(checkSession, 300);
+    // Wait a bit for Supabase local session to load
+    setTimeout(initSession, 400);
 
-    // ✅ Listen for login/logout changes
+    // ✅ Listen for auth state changes (after login/signup)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
+        console.log('✅ Connecté, redirection vers Dashboard');
         window.location.replace('/Dashboard');
       }
     });
@@ -44,6 +40,7 @@ const Login: React.FC = () => {
     };
   }, []);
 
+  // ✅ Handle login or signup
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -51,23 +48,30 @@ const Login: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // ✅ Direct account creation (no email validation)
+        // Create user directly without email confirmation
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { email_confirm: false },
+          options: { emailRedirectTo: undefined },
         });
         if (signUpError) throw signUpError;
 
-        // ✅ Automatically login after signup
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
+        // Auto-login after signup
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (loginError) throw loginError;
       } else {
-        // ✅ Regular login
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        // Regular login
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (loginError) throw loginError;
       }
     } catch (err: any) {
+      console.error(err);
       setError(err.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
@@ -89,7 +93,9 @@ const Login: React.FC = () => {
         <div className="p-8 md:p-12">
           <div className="text-center mb-8">
             <BriefcaseIcon className="mx-auto h-24 w-auto text-brand-primary" />
-            <h2 className="text-3xl font-bold mt-4 text-brand-secondary dark:text-prox-text">PkiGest Pro</h2>
+            <h2 className="text-3xl font-bold mt-4 text-brand-secondary dark:text-prox-text">
+              PkiGest Pro
+            </h2>
             <p className="text-gray-600 dark:text-prox-text-secondary mt-2">
               {isSignUp ? 'Créer un nouveau compte' : 'Connectez-vous à votre compte'}
             </p>
@@ -97,7 +103,10 @@ const Login: React.FC = () => {
 
           <form onSubmit={handleAuth} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-prox-text mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 dark:text-prox-text mb-2"
+              >
                 Email
               </label>
               <input
@@ -112,7 +121,10 @@ const Login: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-prox-text mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 dark:text-prox-text mb-2"
+              >
                 Mot de passe
               </label>
               <input
@@ -137,7 +149,11 @@ const Login: React.FC = () => {
               disabled={loading}
               className="w-full py-3 px-4 bg-brand-primary hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Chargement...' : isSignUp ? 'Créer le compte' : 'Se connecter'}
+              {loading
+                ? 'Chargement...'
+                : isSignUp
+                ? 'Créer le compte'
+                : 'Se connecter'}
             </button>
           </form>
 
@@ -149,7 +165,9 @@ const Login: React.FC = () => {
               }}
               className="text-sm text-brand-primary hover:underline"
             >
-              {isSignUp ? 'Déjà un compte ? Se connecter' : 'Première connexion ? Créer un compte'}
+              {isSignUp
+                ? 'Déjà un compte ? Se connecter'
+                : 'Première connexion ? Créer un compte'}
             </button>
           </div>
         </div>
