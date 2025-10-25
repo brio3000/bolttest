@@ -9,8 +9,9 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
-  const { user, logoUrl } = useAppContext();
-  const isAdmin = user?.role === UserRole.ADMIN;
+  const { user, logoUrl } = useAppContext() || {};
+  const role = user?.role || UserRole.GESTIONNAIRE; // 👈 Default role for guests
+  const isAdmin = role === UserRole.ADMIN;
 
   const navItems = [
     { view: View.DASHBOARD, label: 'Tableau de Bord', icon: ChartPieIcon, roles: [UserRole.ADMIN, UserRole.GESTIONNAIRE] },
@@ -21,19 +22,23 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
 
   return (
     <div className="flex flex-col w-64 bg-brand-secondary text-gray-100 dark:bg-prox-dark-800 dark:text-prox-text border-r border-transparent dark:border-prox-dark-700">
+      {/* Header */}
       <div className="flex flex-col items-center justify-center h-36 border-b border-gray-700 dark:border-prox-dark-700 px-4 space-y-4">
         {logoUrl ? (
-            <img src={logoUrl} alt="Logo PkiGest" className="h-28 max-w-full object-contain" />
+          <img src={logoUrl} alt="Logo PkiGest" className="h-28 max-w-full object-contain" />
         ) : (
-            <>
-                <PkiGestIcon className="h-20 w-20 text-white" />
-                <h1 className="text-3xl font-bold">PkiGest</h1>
-            </>
+          <>
+            <PkiGestIcon className="h-20 w-20 text-white" />
+            <h1 className="text-3xl font-bold">PkiGest</h1>
+          </>
         )}
       </div>
+
+      {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-2">
-        {navItems.map((item) => (
-          item.roles.includes(user!.role) && (
+        {navItems.map((item) =>
+          // ✅ Safely handle missing user
+          item.roles.includes(role) ? (
             <a
               key={item.view}
               href="#"
@@ -50,8 +55,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
               <item.icon className="h-6 w-6 mr-3" />
               <span className="font-medium">{item.label}</span>
             </a>
-          )
-        ))}
+          ) : null
+        )}
       </nav>
     </div>
   );
