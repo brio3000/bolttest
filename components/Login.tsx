@@ -7,36 +7,39 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
     try {
       if (isSignUp) {
-        // --- Create account instantly (no confirmation email) ---
-        const { error } = await supabase.auth.signUp({
+        // ✅ Create user directly (no email confirmation)
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            email_confirm: false, // 👈 disable email confirmation
-            data: { role: 'USER' } // optional metadata
-          }
+          options: { email_confirm: false },
         });
-        if (error) throw error;
-        setMessage('Compte créé avec succès ! Vous pouvez vous connecter.');
-        setIsSignUp(false);
+        if (signUpError) throw signUpError;
+
+        // ✅ Automatically log in newly created user
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
       } else {
-        // --- Login ---
+        // ✅ Normal login flow
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
+
+      // ✅ Redirect after successful login/signup
+      window.location.href = '/dashboard'; // 👈 Change this to your main screen route
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la connexion');
+      setError(err.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
@@ -93,12 +96,6 @@ const Login: React.FC = () => {
               </div>
             )}
 
-            {message && (
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <p className="text-sm text-green-800 dark:text-green-200">{message}</p>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading}
@@ -113,7 +110,6 @@ const Login: React.FC = () => {
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setError(null);
-                setMessage(null);
               }}
               className="text-sm text-brand-primary hover:underline"
             >
