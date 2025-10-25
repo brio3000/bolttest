@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { BriefcaseIcon } from './Icons';
 
@@ -8,6 +8,29 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // ✅ On mount: check if already logged in and redirect
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        window.location.replace('/DashboardScreen'); // 👈 redirect to your dashboard
+      } else {
+        setCheckingSession(false);
+      }
+    };
+    checkSession();
+
+    // ✅ Auto-redirect when a session starts (after login)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        window.location.replace('/DashboardScreen');
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +39,7 @@ const Login: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // ✅ Create user directly (no email confirmation)
+        // 👇 Direct account creation (no email validation)
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -24,26 +47,27 @@ const Login: React.FC = () => {
         });
         if (signUpError) throw signUpError;
 
-        // ✅ Automatically log in newly created user
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
       } else {
-        // ✅ Normal login flow
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-
-      // ✅ Redirect after successful login/signup
-      window.location.href = '/dashboard'; // 👈 Change this to your main screen route
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
   };
+
+  // ⏳ Wait until session check completes
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-prox-dark-900">
+        <p className="text-gray-700 dark:text-prox-text">Chargement...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-prox-dark-900">
@@ -55,7 +79,7 @@ const Login: React.FC = () => {
               PkiGest Pro
             </h2>
             <p className="text-gray-600 dark:text-prox-text-secondary mt-2">
-              {isSignUp ? 'Créez votre compte' : 'Connectez-vous à votre compte'}
+              {isSignUp ? 'Créer un nouveau compte' : 'Connectez-vous à votre compte'}
             </p>
           </div>
 
