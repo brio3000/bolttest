@@ -7,19 +7,33 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setMessage(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
+      if (isSignUp) {
+        // --- Sign-up flow ---
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin, // optional redirect link
+            data: { role: 'USER' }                   // optional metadata
+          }
+        });
+        if (error) throw error;
+        setMessage('Un lien de confirmation a été envoyé à votre adresse e-mail.');
+      } else {
+        // --- Login flow ---
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion');
     } finally {
@@ -33,11 +47,15 @@ const Login: React.FC = () => {
         <div className="p-8 md:p-12">
           <div className="text-center mb-8">
             <BriefcaseIcon className="mx-auto h-24 w-auto text-brand-primary" />
-            <h2 className="text-3xl font-bold mt-4 text-brand-secondary dark:text-prox-text">PkiGest Pro</h2>
-            <p className="text-gray-600 dark:text-prox-text-secondary mt-2">Connectez-vous à votre compte</p>
+            <h2 className="text-3xl font-bold mt-4 text-brand-secondary dark:text-prox-text">
+              PkiGest Pro
+            </h2>
+            <p className="text-gray-600 dark:text-prox-text-secondary mt-2">
+              {isSignUp ? 'Créez votre compte' : 'Connectez-vous à votre compte'}
+            </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleAuth} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-prox-text mb-2">
                 Email
@@ -74,19 +92,34 @@ const Login: React.FC = () => {
               </div>
             )}
 
+            {message && (
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <p className="text-sm text-green-800 dark:text-green-200">{message}</p>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
               className="w-full py-3 px-4 bg-brand-primary hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? 'Chargement...' : isSignUp ? 'Créer le compte' : 'Se connecter'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 dark:text-prox-text-secondary">
-              Première connexion ? Contactez votre administrateur pour créer un compte.
-            </p>
+            <button
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError(null);
+                setMessage(null);
+              }}
+              className="text-sm text-brand-primary hover:underline"
+            >
+              {isSignUp
+                ? 'Déjà un compte ? Se connecter'
+                : 'Première connexion ? Créer un compte'}
+            </button>
           </div>
         </div>
       </div>
