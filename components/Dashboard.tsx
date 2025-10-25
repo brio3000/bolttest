@@ -1,4 +1,4 @@
-import React, { useMemo, FC } from 'react';
+import React, { useMemo, FC, memo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useAppContext } from '../hooks/useAppContext';
 import { StatutCertificat } from '../types';
@@ -6,14 +6,14 @@ import { ChartPieIcon, CheckCircleIcon, ExclamationIcon, XCircleIcon, UsersIcon,
 
 
 const COLORS = {
-  [StatutCertificat.VALIDE]: '#22c55e', // green-500
-  [StatutCertificat.EXPIRE_BIENTOT]: '#f59e0b', // amber-500
-  [StatutCertificat.EXPIRE]: '#ef4444', // red-500
+  [StatutCertificat.VALIDE]: '#22c55e',
+  [StatutCertificat.EXPIRE_BIENTOT]: '#f59e0b',
+  [StatutCertificat.EXPIRE]: '#ef4444',
 };
 
 const ENTITY_COLORS = ['#0052cc', '#172b4d', '#00C49F', '#FFBB28', '#FF8042'];
 
-const DashboardCard: FC<{ title: string; icon?: React.ReactNode; children: React.ReactNode; className?: string, contentClassName?: string }> = ({ title, icon, children, className, contentClassName }) => (
+const DashboardCard: FC<{ title: string; icon?: React.ReactNode; children: React.ReactNode; className?: string, contentClassName?: string }> = memo(({ title, icon, children, className, contentClassName }) => (
     <div className={`bg-white dark:bg-prox-dark-800 p-6 rounded-xl shadow-lg flex flex-col ${className}`}>
         <h3 className="font-semibold text-lg text-brand-secondary dark:text-prox-text mb-4 flex items-center">
             {icon && <span className="mr-3 text-brand-primary">{icon}</span>}
@@ -23,9 +23,10 @@ const DashboardCard: FC<{ title: string; icon?: React.ReactNode; children: React
             {children}
         </div>
     </div>
-);
+));
+DashboardCard.displayName = 'DashboardCard';
 
-const StatCard: FC<{ title: string, value: string | number, icon: React.ReactNode, colorClass: string }> = ({ title, value, icon, colorClass }) => (
+const StatCard: FC<{ title: string, value: string | number, icon: React.ReactNode, colorClass: string }> = memo(({ title, value, icon, colorClass }) => (
     <div className="bg-white dark:bg-prox-dark-800 p-6 rounded-xl shadow-lg flex items-center space-x-4">
         <div className={`p-3 rounded-full ${colorClass.replace('text-', 'bg-').replace('dark:text-', 'dark:bg-')}/10`}>
             {icon}
@@ -35,9 +36,10 @@ const StatCard: FC<{ title: string, value: string | number, icon: React.ReactNod
             <p className={`text-3xl font-bold ${colorClass}`}>{value}</p>
         </div>
     </div>
-);
+));
+StatCard.displayName = 'StatCard';
 
-const Dashboard: React.FC = () => {
+const Dashboard: React.FC = memo(() => {
   const { getFilteredEmployeCertificats, getFilteredEmployes, getCertificateStatus, entites, employes, theme, certificats: certificateTypes } = useAppContext();
 
   const certificats = getFilteredEmployeCertificats();
@@ -271,6 +273,7 @@ const Dashboard: React.FC = () => {
       </div>
     </div>
   );
-};
+});
+Dashboard.displayName = 'Dashboard';
 
 export default Dashboard;

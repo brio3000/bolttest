@@ -1,25 +1,79 @@
-// App.tsx
-import { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import React, { useState, lazy, Suspense } from 'react';
+import { useAppContext } from './hooks/useAppContext';
+import Login from './components/Login';
+import Sidebar from './components/Sidebar';
+import { Header } from './components/Header';
+import { View } from './types';
+import Modal from './components/Modal';
+import { TrashIcon } from './components/Icons';
 
-// Lazy-load your Management screen (or replace with a direct import)
-const Management = lazy(() => import("./screens/Management"));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Management = lazy(() => import('./components/Management'));
+const Docs = lazy(() => import('./components/Docs'));
+const Settings = lazy(() => import('./components/Settings'));
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Suspense fallback={<div className="p-4">Loading…</div>}>
-        <Routes>
-          {/* Redirect root to /management */}
-          <Route path="/" element={<Navigate to="/management" replace />} />
+const App: React.FC = () => {
+  const { user, confirmationState, hideConfirmation, confirmAction } = useAppContext();
+  const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
 
-          {/* Management screen */}
-          <Route path="/management" element={<Management />} />
+  if (!user) {
+    return <Login />;
+  }
 
-          {/* Optional: catch-all -> Management (or a 404 page if you prefer) */}
-          <Route path="*" element={<Navigate to="/management" replace />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+  const renderView = () => {
+    switch (currentView) {
+      case View.DASHBOARD:
+        return <Dashboard />;
+      case View.MANAGEMENT:
+        return <Management />;
+      case View.DOCS:
+        return <Docs />;
+      case View.SETTINGS:
+        return <Settings />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
+  const LoadingFallback = () => (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-lg text-gray-600 dark:text-prox-text-secondary">Chargement...</div>
+    </div>
   );
-}
+
+  return (
+    <div className="flex h-screen text-gray-800 dark:text-prox-text">
+      <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-prox-dark-900 p-6">
+          <Suspense fallback={<LoadingFallback />}>
+            {renderView()}
+          </Suspense>
+        </main>
+      </div>
+       <Modal
+        isOpen={confirmationState.isOpen}
+        onClose={hideConfirmation}
+        title="Confirmation de suppression"
+        footer={
+          <>
+            <button type="button" onClick={hideConfirmation} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-prox-dark-700 dark:text-prox-text dark:hover:bg-prox-dark-600">
+                Annuler
+            </button>
+            <button type="button" onClick={confirmAction} className="px-4 py-2 text-sm font-medium text-white bg-status-expired rounded-lg hover:bg-red-700 flex items-center">
+                <TrashIcon className="h-4 w-4 mr-2" />
+                Confirmer
+            </button>
+          </>
+        }
+      >
+        <div className="text-gray-600 dark:text-prox-text">
+            {confirmationState.message}
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default App;

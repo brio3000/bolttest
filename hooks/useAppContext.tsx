@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import { User, UserRole, Ville, Entite, Agence, Certificat, Employe, EmployeCertificat, StatutCertificat, Groupe, Dossier, Document, NotificationSettings } from '../types';
 import { settingsService } from '../services/settingsService';
 import { dataService } from '../services/dataService';
-import { supabase } from '../lib/supabase';
 
 export interface BackgroundConfig {
   type: 'color' | 'image' | 'default';
@@ -122,11 +121,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setUser({ nom: 'Gestionnaire', role: UserRole.GESTIONNAIRE, entiteId: 1 });
         }
     };
-
-    const logout = async () => {
-        await supabase.auth.signOut();
-        setUser(null);
-    };
+    const logout = () => setUser(null);
 
     const toggleTheme = () => {
         setTheme(prev => prev === 'light' ? 'dark' : 'light');
@@ -140,34 +135,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
         localStorage.setItem('theme', theme);
     }, [theme]);
-
-    useEffect(() => {
-        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-            (async () => {
-                if (session?.user) {
-                    const { data: userData, error } = await supabase
-                        .from('users')
-                        .select('*')
-                        .eq('id', session.user.id)
-                        .maybeSingle();
-
-                    if (userData && !error) {
-                        setUser({
-                            nom: userData.nom,
-                            role: userData.role as UserRole,
-                            entiteId: userData.entite_id ? parseInt(userData.entite_id.substring(0, 8), 16) : undefined,
-                        });
-                    }
-                } else {
-                    setUser(null);
-                }
-            })();
-        });
-
-        return () => {
-            authListener.subscription.unsubscribe();
-        };
-    }, []);
 
     useEffect(() => {
         const loadAllData = async () => {
