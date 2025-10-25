@@ -10,21 +10,29 @@ const Login: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
-  // ✅ Check session on mount
+  // ✅ Check if user is already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        // ✅ Already logged in
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error('Erreur de session:', error);
+        setCheckingSession(false);
+        return;
+      }
+
+      if (data?.session) {
+        console.log('✅ Déjà connecté, redirection vers Dashboard');
         window.location.replace('/Dashboard');
       } else {
         setCheckingSession(false);
       }
     };
 
-    checkSession();
+    // Small delay to let Supabase initialize local session
+    setTimeout(checkSession, 300);
 
-    // ✅ Listen for login/logout events
+    // ✅ Listen for login/logout changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         window.location.replace('/Dashboard');
@@ -43,7 +51,7 @@ const Login: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // ✅ Create account directly (no email verification)
+        // ✅ Direct account creation (no email validation)
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -51,11 +59,11 @@ const Login: React.FC = () => {
         });
         if (signUpError) throw signUpError;
 
-        // ✅ Automatically log in after sign-up
+        // ✅ Automatically login after signup
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
       } else {
-        // ✅ Normal sign-in
+        // ✅ Regular login
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
@@ -66,7 +74,7 @@ const Login: React.FC = () => {
     }
   };
 
-  // 🕒 While checking session, display loader
+  // 🕒 While checking session
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-prox-dark-900">
