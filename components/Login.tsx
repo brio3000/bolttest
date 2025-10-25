@@ -10,26 +10,30 @@ const Login: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
-  // ✅ On mount: check if already logged in and redirect
+  // ✅ Check session on mount
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        window.location.replace('/Dashboard'); // 👈 redirect to your dashboard
+        // ✅ Already logged in
+        window.location.replace('/Dashboard');
       } else {
         setCheckingSession(false);
       }
     };
+
     checkSession();
 
-    // ✅ Auto-redirect when a session starts (after login)
+    // ✅ Listen for login/logout events
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         window.location.replace('/Dashboard');
       }
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -39,7 +43,7 @@ const Login: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // 👇 Direct account creation (no email validation)
+        // ✅ Create account directly (no email verification)
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -47,9 +51,11 @@ const Login: React.FC = () => {
         });
         if (signUpError) throw signUpError;
 
+        // ✅ Automatically log in after sign-up
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
       } else {
+        // ✅ Normal sign-in
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
@@ -60,7 +66,7 @@ const Login: React.FC = () => {
     }
   };
 
-  // ⏳ Wait until session check completes
+  // 🕒 While checking session, display loader
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-prox-dark-900">
@@ -75,9 +81,7 @@ const Login: React.FC = () => {
         <div className="p-8 md:p-12">
           <div className="text-center mb-8">
             <BriefcaseIcon className="mx-auto h-24 w-auto text-brand-primary" />
-            <h2 className="text-3xl font-bold mt-4 text-brand-secondary dark:text-prox-text">
-              PkiGest Pro
-            </h2>
+            <h2 className="text-3xl font-bold mt-4 text-brand-secondary dark:text-prox-text">PkiGest Pro</h2>
             <p className="text-gray-600 dark:text-prox-text-secondary mt-2">
               {isSignUp ? 'Créer un nouveau compte' : 'Connectez-vous à votre compte'}
             </p>
@@ -137,9 +141,7 @@ const Login: React.FC = () => {
               }}
               className="text-sm text-brand-primary hover:underline"
             >
-              {isSignUp
-                ? 'Déjà un compte ? Se connecter'
-                : 'Première connexion ? Créer un compte'}
+              {isSignUp ? 'Déjà un compte ? Se connecter' : 'Première connexion ? Créer un compte'}
             </button>
           </div>
         </div>
