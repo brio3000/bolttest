@@ -1,9 +1,10 @@
-import React, { useMemo, FC, memo, useEffect, useState } from 'react';
+import React, { useMemo, FC, memo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useAppContext } from '../hooks/useAppContext';
 import { StatutCertificat } from '../types';
 import { ChartPieIcon, CheckCircleIcon, ExclamationIcon, XCircleIcon, UsersIcon, LogOutIcon } from './Icons';
 import { supabase } from '../lib/supabase';
+import ProtectedRoute from './ProtectedRoute'; // ✅ added
 
 const COLORS = {
   [StatutCertificat.VALIDE]: '#22c55e',
@@ -24,60 +25,11 @@ DashboardCard.displayName = 'DashboardCard';
 
 const Dashboard: React.FC = memo(() => {
   const { getFilteredEmployeCertificats, getFilteredEmployes, getCertificateStatus, theme } = useAppContext();
-  const [checkingSession, setCheckingSession] = useState(true);
-
-  // ✅ Wait until Supabase fully initializes session before redirect
-  useEffect(() => {
-    let isMounted = true;
-
-    const verifySession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error('Erreur de session:', error);
-        if (isMounted) {
-          setCheckingSession(false);
-          window.location.replace('/login');
-        }
-        return;
-      }
-
-      if (data?.session) {
-        console.log('✅ Session active:', data.session.user.email);
-        if (isMounted) setCheckingSession(false);
-      } else {
-        if (isMounted) {
-          setCheckingSession(false);
-          window.location.replace('/login');
-        }
-      }
-    };
-
-    // Wait a bit for Supabase to load persisted session
-    setTimeout(verifySession, 300);
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) window.location.replace('/login');
-    });
-
-    return () => {
-      isMounted = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.replace('/login');
   };
-
-  if (checkingSession) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-prox-dark-900">
-        <p className="text-gray-700 dark:text-prox-text">Vérification de la session...</p>
-      </div>
-    );
-  }
 
   const certificats = getFilteredEmployeCertificats();
   const statusData = useMemo(() => {
@@ -106,28 +58,30 @@ const Dashboard: React.FC = memo(() => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-brand-secondary dark:text-prox-text">Vue d'ensemble</h1>
-        <button onClick={handleLogout} className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-          <LogOutIcon className="h-5 w-5 mr-2" /> Se déconnecter
-        </button>
-      </div>
+    <ProtectedRoute>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-brand-secondary dark:text-prox-text">Vue d'ensemble</h1>
+          <button onClick={handleLogout} className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <LogOutIcon className="h-5 w-5 mr-2" /> Se déconnecter
+          </button>
+        </div>
 
-      <DashboardCard title="Statut global des certificats" icon={<ChartPieIcon className="h-6 w-6" />}>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={120} label>
-              {statusData.map((entry, i) => (
-                <Cell key={i} fill={COLORS[entry.name as StatutCertificat]} />
-              ))}
-            </Pie>
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </DashboardCard>
-    </div>
+        <DashboardCard title="Statut global des certificats" icon={<ChartPieIcon className="h-6 w-6" />}>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={120} label>
+                {statusData.map((entry, i) => (
+                  <Cell key={i} fill={COLORS[entry.name as StatutCertificat]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </DashboardCard>
+      </div>
+    </ProtectedRoute>
   );
 });
 
