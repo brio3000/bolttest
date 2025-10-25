@@ -1,0 +1,5 @@
+{
+  "name": "Copy of PkiGest Pro",
+  "description": "An elegant and modern web application to manage employee certifications within a multi-tenant architecture. It features a graphical dashboard, CRUD operations for all entities, and role-based access control.",
+  "requestFramePermissions": []
+}
