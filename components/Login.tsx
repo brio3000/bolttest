@@ -18,24 +18,25 @@ const Login: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // --- Sign-up flow ---
+        // --- Create account instantly (no confirmation email) ---
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin, // optional redirect link
-            data: { role: 'USER' }                   // optional metadata
+            email_confirm: false, // 👈 disable email confirmation
+            data: { role: 'USER' } // optional metadata
           }
         });
         if (error) throw error;
-        setMessage('Un lien de confirmation a été envoyé à votre adresse e-mail.');
+        setMessage('Compte créé avec succès ! Vous pouvez vous connecter.');
+        setIsSignUp(false);
       } else {
-        // --- Login flow ---
+        // --- Login ---
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
     } catch (err: any) {
-      setError(err.message || 'Erreur de connexion');
+      setError(err.message || 'Erreur lors de la connexion');
     } finally {
       setLoading(false);
     }
