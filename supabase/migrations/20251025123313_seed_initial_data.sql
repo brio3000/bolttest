@@ -1,0 +1,91 @@
+/*
+  # Seed Initial Data
+
+  ## Overview
+  This migration seeds the database with initial sample data for testing and development.
+  All the data comes from the original TypeScript constants file.
+
+  ## Data Seeded
+  - 3 Cities (Villes)
+  - 2 Entities (Entites)
+  - 3 Agencies (Agences)
+  - 4 Certificate Types (Certificats)
+  - 4 Employees (Employes)
+  - 6 Employee Certificates (EmployeCertificats)
+  - 2 Groups (Groupes) with members
+  - 3 Folders (Dossiers)
+  - 3 Documents
+*/
+
+-- Insert Villes
+INSERT INTO villes (id, nom) VALUES
+  ('00000001-0000-0000-0000-000000000000', 'Paris'),
+  ('00000002-0000-0000-0000-000000000000', 'Lyon'),
+  ('00000003-0000-0000-0000-000000000000', 'Marseille')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Entites
+INSERT INTO entites (id, nom) VALUES
+  ('00000001-0000-0000-0000-000000000000', 'Tech Solutions Inc.'),
+  ('00000002-0000-0000-0000-000000000000', 'Innovate Group')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Agences
+INSERT INTO agences (id, nom, ville_id, entite_id) VALUES
+  ('00000001-0000-0000-0000-000000000000', 'Agence Paris Centre', '00000001-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000'),
+  ('00000002-0000-0000-0000-000000000000', 'Agence Lyon Part-Dieu', '00000002-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000'),
+  ('00000003-0000-0000-0000-000000000000', 'Agence Marseille Vieux-Port', '00000003-0000-0000-0000-000000000000', '00000002-0000-0000-0000-000000000000')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Certificats
+INSERT INTO certificats (id, nom_certificat, duree_validite_jours) VALUES
+  ('00000001-0000-0000-0000-000000000000', 'Sauveteur Secouriste du Travail (SST)', 730),
+  ('00000002-0000-0000-0000-000000000000', 'Habilitation Électrique B1V', 1095),
+  ('00000003-0000-0000-0000-000000000000', 'Certification Cloud AWS', 365),
+  ('00000004-0000-0000-0000-000000000000', 'Gestion de Projet PMP', 1095)
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Employes
+INSERT INTO employes (id, nom, prenom, id_interne, gsm, email, entite_id, agence_id) VALUES
+  ('00000001-0000-0000-0000-000000000000', 'Dupont', 'Jean', 'TS001', '0612345678', 'jean.dupont@tech.com', '00000001-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000'),
+  ('00000002-0000-0000-0000-000000000000', 'Martin', 'Marie', 'TS002', '0687654321', 'marie.martin@tech.com', '00000001-0000-0000-0000-000000000000', '00000002-0000-0000-0000-000000000000'),
+  ('00000003-0000-0000-0000-000000000000', 'Bernard', 'Luc', 'IG001', '0611223344', 'luc.bernard@innovate.com', '00000002-0000-0000-0000-000000000000', '00000003-0000-0000-0000-000000000000'),
+  ('00000004-0000-0000-0000-000000000000', 'Petit', 'Sophie', 'TS003', '0655667788', 'sophie.petit@tech.com', '00000001-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Employe Certificats (with dynamic dates)
+INSERT INTO employe_certificats (id, employe_id, certificat_id, date_obtention, date_expiration, chemin_pdf, statut) VALUES
+  ('00000001-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000', CURRENT_DATE - 200, CURRENT_DATE + 530, '/files/cert1.pdf', 'Valide'),
+  ('00000002-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000', '00000003-0000-0000-0000-000000000000', CURRENT_DATE - 340, CURRENT_DATE + 25, '/files/cert2.pdf', 'Expire Bientôt'),
+  ('00000003-0000-0000-0000-000000000000', '00000002-0000-0000-0000-000000000000', '00000002-0000-0000-0000-000000000000', CURRENT_DATE - 1145, CURRENT_DATE - 50, '/files/cert3.pdf', 'Expiré'),
+  ('00000004-0000-0000-0000-000000000000', '00000003-0000-0000-0000-000000000000', '00000004-0000-0000-0000-000000000000', CURRENT_DATE - 500, CURRENT_DATE + 595, '/files/cert4.pdf', 'Valide'),
+  ('00000005-0000-0000-0000-000000000000', '00000004-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000', CURRENT_DATE - 650, CURRENT_DATE + 80, '/files/cert5.pdf', 'Expire Bientôt'),
+  ('00000006-0000-0000-0000-000000000000', '00000002-0000-0000-0000-000000000000', '00000004-0000-0000-0000-000000000000', CURRENT_DATE - 1040, CURRENT_DATE + 55, '/files/cert6.pdf', 'Expire Bientôt')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Groupes
+INSERT INTO groupes (id, nom, entite_id) VALUES
+  ('00000001-0000-0000-0000-000000000000', 'Équipe SST Paris', '00000001-0000-0000-0000-000000000000'),
+  ('00000002-0000-0000-0000-000000000000', 'Experts Cloud Marseille', '00000002-0000-0000-0000-000000000000')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Groupe Members
+INSERT INTO groupe_employes (groupe_id, employe_id) VALUES
+  ('00000001-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000'),
+  ('00000001-0000-0000-0000-000000000000', '00000004-0000-0000-0000-000000000000'),
+  ('00000002-0000-0000-0000-000000000000', '00000003-0000-0000-0000-000000000000')
+ON CONFLICT DO NOTHING;
+
+-- Insert Dossiers
+INSERT INTO dossiers (id, nom) VALUES
+  ('00000001-0000-0000-0000-000000000000', 'Documents RH'),
+  ('00000002-0000-0000-0000-000000000000', 'Contrats de travail'),
+  ('00000003-0000-0000-0000-000000000000', 'Visites Médicales')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Documents
+INSERT INTO documents (id, nom, dossier_id, employe_id, chemin_pdf, date_ajout) VALUES
+  ('00000001-0000-0000-0000-000000000000', 'Contrat - Jean Dupont.pdf', '00000002-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000', '/docs/contrat_dupont.pdf', '2023-01-15'),
+  ('00000002-0000-0000-0000-000000000000', 'Aptitude - Jean Dupont.pdf', '00000003-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000', '/docs/visite_dupont.pdf', '2023-02-20'),
+  ('00000003-0000-0000-0000-000000000000', 'Contrat - Marie Martin.pdf', '00000002-0000-0000-0000-000000000000', '00000002-0000-0000-0000-000000000000', '/docs/contrat_martin.pdf', '2023-03-10')
+ON CONFLICT (id) DO NOTHING;
