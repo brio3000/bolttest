@@ -15,7 +15,7 @@ const Login: React.FC = () => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        window.location.replace('/DashboardScreen'); // 👈 redirect to your dashboard
+        window.location.replace('/Dashboard'); // 👈 redirect to your dashboard
       } else {
         setCheckingSession(false);
       }
@@ -25,7 +25,7 @@ const Login: React.FC = () => {
     // ✅ Auto-redirect when a session starts (after login)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        window.location.replace('/DashboardScreen');
+        window.location.replace('/Dashboard');
       }
     });
 
