@@ -2,8 +2,8 @@ import React, { useMemo, FC, memo, useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useAppContext } from '../hooks/useAppContext';
 import { StatutCertificat } from '../types';
-import { ChartPieIcon, CheckCircleIcon, ExclamationIcon, XCircleIcon, UsersIcon, EyeIcon, ClockIcon, BriefcaseIcon, LogOutIcon } from './Icons';
-import { supabase } from '../lib/supabase'; // ✅ Auth check
+import { ChartPieIcon, CheckCircleIcon, ExclamationIcon, XCircleIcon, UsersIcon, LogOutIcon } from './Icons';
+import { supabase } from '../lib/supabase';
 
 const COLORS = {
   [StatutCertificat.VALIDE]: '#22c55e',
@@ -11,37 +11,22 @@ const COLORS = {
   [StatutCertificat.EXPIRE]: '#ef4444',
 };
 
-const ENTITY_COLORS = ['#0052cc', '#172b4d', '#00C49F', '#FFBB28', '#FF8042'];
-
-const DashboardCard: FC<{ title: string; icon?: React.ReactNode; children: React.ReactNode; className?: string; contentClassName?: string }> = memo(({ title, icon, children, className, contentClassName }) => (
-  <div className={`bg-white dark:bg-prox-dark-800 p-6 rounded-xl shadow-lg flex flex-col ${className}`}>
+const DashboardCard: FC<{ title: string; icon?: React.ReactNode; children: React.ReactNode }> = memo(({ title, icon, children }) => (
+  <div className="bg-white dark:bg-prox-dark-800 p-6 rounded-xl shadow-lg flex flex-col">
     <h3 className="font-semibold text-lg text-brand-secondary dark:text-prox-text mb-4 flex items-center">
       {icon && <span className="mr-3 text-brand-primary">{icon}</span>}
       {title}
     </h3>
-    <div className={`flex-grow ${contentClassName}`}>{children}</div>
+    <div className="flex-grow">{children}</div>
   </div>
 ));
 DashboardCard.displayName = 'DashboardCard';
 
-const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode; colorClass: string }> = memo(({ title, value, icon, colorClass }) => (
-  <div className="bg-white dark:bg-prox-dark-800 p-6 rounded-xl shadow-lg flex items-center space-x-4">
-    <div className={`p-3 rounded-full ${colorClass.replace('text-', 'bg-').replace('dark:text-', 'dark:bg-')}/10`}>
-      {icon}
-    </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500 dark:text-prox-text-secondary">{title}</p>
-      <p className={`text-3xl font-bold ${colorClass}`}>{value}</p>
-    </div>
-  </div>
-));
-StatCard.displayName = 'StatCard';
-
 const Dashboard: React.FC = memo(() => {
-  const { getFilteredEmployeCertificats, getFilteredEmployes, getCertificateStatus, entites, employes, theme, certificats: certificateTypes } = useAppContext();
+  const { getFilteredEmployeCertificats, getFilteredEmployes, getCertificateStatus, theme } = useAppContext();
   const [checkingSession, setCheckingSession] = useState(true);
 
-  // ✅ Fix infinite redirect loop by waiting for Supabase to load session
+  // ✅ Wait until Supabase fully initializes session before redirect
   useEffect(() => {
     let isMounted = true;
 
@@ -50,19 +35,27 @@ const Dashboard: React.FC = memo(() => {
 
       if (error) {
         console.error('Erreur de session:', error);
-        if (isMounted) window.location.replace('/login');
-      } else if (!data.session) {
-        if (isMounted) window.location.replace('/login');
-      } else {
-        console.log('✅ Session active:', data.session.user.email);
+        if (isMounted) {
+          setCheckingSession(false);
+          window.location.replace('/login');
+        }
+        return;
       }
 
-      if (isMounted) setCheckingSession(false);
+      if (data?.session) {
+        console.log('✅ Session active:', data.session.user.email);
+        if (isMounted) setCheckingSession(false);
+      } else {
+        if (isMounted) {
+          setCheckingSession(false);
+          window.location.replace('/login');
+        }
+      }
     };
 
-    verifySession();
+    // Wait a bit for Supabase to load persisted session
+    setTimeout(verifySession, 300);
 
-    // Optional listener (logout redirection)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) window.location.replace('/login');
     });
@@ -73,13 +66,11 @@ const Dashboard: React.FC = memo(() => {
     };
   }, []);
 
-  // ✅ Logout handler
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.replace('/login');
   };
 
-  // ✅ Show loader while verifying session
   if (checkingSession) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-prox-dark-900">
@@ -88,9 +79,7 @@ const Dashboard: React.FC = memo(() => {
     );
   }
 
-  // ✅ Your full dashboard logic remains untouched below
   const certificats = getFilteredEmployeCertificats();
-
   const statusData = useMemo(() => {
     const data = certificats.reduce((acc, cert) => {
       const status = getCertificateStatus(cert.date_expiration);
@@ -107,72 +96,6 @@ const Dashboard: React.FC = memo(() => {
     return data;
   }, [certificats, getCertificateStatus]);
 
-  const certificatesToWatch = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return certificats
-      .filter(cert => new Date(cert.date_expiration) >= today)
-      .map(cert => {
-        const expDate = new Date(cert.date_expiration);
-        const diffDays = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        return {
-          ...cert,
-          employe: employes.find(e => e.id === cert.employeId),
-          certificat: certificateTypes.find(c => c.id === cert.certificatId),
-          daysRemaining: diffDays,
-        };
-      })
-      .sort((a, b) => a.daysRemaining - b.daysRemaining)
-      .slice(0, 5);
-  }, [certificats, employes, certificateTypes]);
-
-  const yearlyExpirationData = useMemo(() => {
-    const months = [];
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      months.push({ name: d.toLocaleString('fr-FR', { month: 'short' }), expirations: 0 });
-    }
-    const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-    certificats.forEach(cert => {
-      const expDate = new Date(cert.date_expiration);
-      if (expDate >= now && expDate < oneYearFromNow) {
-        let monthIndex = (expDate.getFullYear() - now.getFullYear()) * 12 + expDate.getMonth() - now.getMonth();
-        if (monthIndex >= 0 && monthIndex < 12) months[monthIndex].expirations++;
-      }
-    });
-    return months;
-  }, [certificats]);
-
-  const certificatesByEntityData = useMemo(() => {
-    const data = entites.map(e => ({ name: e.nom, value: 0 }));
-    const employeIdToEntiteId = new Map(employes.map(e => [e.id, e.entiteId]));
-    certificats.forEach(cert => {
-      const entiteId = employeIdToEntiteId.get(cert.employeId);
-      if (entiteId) {
-        const entityData = data.find(d => entites.find(e => e.nom === d.name)?.id === entiteId);
-        if (entityData) entityData.value++;
-      }
-    });
-    return data.filter(d => d.value > 0);
-  }, [certificats, employes, entites]);
-
-  const certificatesByEmployeeData = useMemo(() => {
-    const counts: { [id: number]: number } = {};
-    certificats.forEach(cert => {
-      counts[cert.employeId] = (counts[cert.employeId] || 0) + 1;
-    });
-    return Object.keys(counts)
-      .map(employeIdStr => {
-        const employeId = parseInt(employeIdStr, 10);
-        const employe = employes.find(e => e.id === employeId);
-        return { name: employe ? `${employe.prenom} ${employe.nom}` : `Inconnu (${employeId})`, certifications: counts[employeId] };
-      })
-      .sort((a, b) => b.certifications - a.certifications)
-      .slice(0, 5);
-  }, [certificats, employes]);
-
   const isDark = theme === 'dark';
   const tickColor = isDark ? '#a0a0a0' : '#6b7281';
   const gridColor = isDark ? '#3c3c3c' : '#e5e7eb';
@@ -180,8 +103,6 @@ const Dashboard: React.FC = memo(() => {
     backgroundColor: isDark ? '#2d2d2d' : '#ffffff',
     border: `1px solid ${gridColor}`,
     color: isDark ? '#e0e0e0' : '#1f2937',
-    borderRadius: '0.75rem',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
   };
 
   return (
@@ -193,7 +114,19 @@ const Dashboard: React.FC = memo(() => {
         </button>
       </div>
 
-      {/* ✅ Keep all your existing charts and content below */}
+      <DashboardCard title="Statut global des certificats" icon={<ChartPieIcon className="h-6 w-6" />}>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={120} label>
+              {statusData.map((entry, i) => (
+                <Cell key={i} fill={COLORS[entry.name as StatutCertificat]} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </DashboardCard>
     </div>
   );
 });
